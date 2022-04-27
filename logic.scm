@@ -473,8 +473,3 @@ both args must be qe-applicable
 (existential-specification-rule psi existential psi existential-premise-set psi-premise-set-2)
 ;Value: #f
 |#
-
-
-
-
-
