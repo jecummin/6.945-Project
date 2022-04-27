@@ -232,7 +232,7 @@ premise set if derivation applies, #f otherwise
 (define (conditional-proof-rule derived phi psi phi-premise-set psi-premise-set)
   (if (and (sentence-eqv? (first-argument derived) phi)
 	   (sentence-eqv? (second-argument derived) psi))
-      (delete phi phi-premise-set)
+      (delete phi psi-premise-set)
       #f))
 
 #|
