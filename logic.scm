@@ -317,6 +317,56 @@ premise set if derivation applies, #f otherwise
 
 ;;; QE ugh I'll do it later
 
+#|
+;; universal-specification-applicability derived sentence
+ (define (qe-applicable? x) 
+   (or 
+    (or (universal? x) 
+	(and (negation? x) (universal? (first-argument x))))
+    (or (existential? x) 
+	(and (negation? x) (existential? (first-argument x))))))
+
+both args must be qe-applicable
+
+|#
+(define (quantifier-exchange-rule derived sentence premise-set)
+  (define (negated? x y)
+    (and (negation? y)
+    (sentence-eqv? x (first-argument y))))
+  (cond
+   ((universal? x)
+    (if (and (negation? y) (existential? (first-argument y)))
+	(cond
+	 ((negated? x y)  premise-set)
+	 ((negated? y x)  premise-set)
+	 (else #f))
+	#f))
+   ((and (negation? x) (universal? (first-argument x)))
+    (if (existential? y)
+	(cond
+	 ((negated? x y)  premise-set)
+	 ((negated? y x)  premise-set)
+	 (else #f))
+	#f))
+   ((existential? x)
+    (if (and (negation? y) (universal? (first-argument y)))
+	(cond
+	 ((negated? x y)  premise-set)
+	 ((negated? y x)  premise-set)
+	 (else #f))
+	#f))
+   ((and (negation? x) (existential? (first-argument x)))
+        (if (universal? y)
+	(cond
+	 ((negated? x y)  premise-set)
+	 ((negated? y x)  premise-set)
+	 (else #f))
+	#f))
+   (else #f)))
+
+
+;;; TC ugh I'll do it later
+
 
 
 
