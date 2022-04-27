@@ -60,14 +60,16 @@
        (not1? (second psi))
        (not1? (third psi))))
 
-(define (apply-demorgans
-  derived
-  sentences)
+(define (derive-unary
+	 procedure
+	 applicability
+	 derived
+	 sentences)
   (let ((possibilities (filter (lambda (sentence)
-				 (demorgans? (car sentence)))
+				 (applicability (car sentence)))
 			       sentences)))
     (find-first (lambda (sentence)
-		(demorgans derived (car sentence) (cdr sentence)))
+		(procedure derived (car sentence) (cdr sentence)))
 		possibilities)))
 
 ;;; Finds the first element of lis where pred is not #f
@@ -90,7 +92,7 @@
 		      '(c y)))
   (define delta (cons '(not (and a b))
 		      '(d z)))
-  (define res (apply-demorgans derived (list alpha beta gamma)))
+  (define res (derive-unary demorgans demorgans? derived (list alpha beta gamma)))
   (write (car res)) (newline)
   (write (cdr res)) (newline)
 )
