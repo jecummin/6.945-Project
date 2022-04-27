@@ -1,11 +1,37 @@
-(load "logic.scm")
 (load "utils.scm")
 
-(define (define-rule
+#| INTERFACE |#
+
+; Resets the list of rules
+(define (reset-rules!)
+  (set! rules (list)))
+
+; Adds a rule
+(define (define-rule!
 	  name
-	  arity
+	  applicability
 	  procedure)
-  #f)
+  (set! rules (cons (list name
+			  applicability
+			  procedure)
+		    rules)))
+
+; Analyzes an argument (list of sentences) using defined rules
+(define (analyze-argument argument)
+  (reverse (analyze-argument-recursive argument
+				       (list))))
+
+; Prints the argument in a more user-friendly format
+(define (describe-argument argument)
+  (display "\nArgument:\n")
+  (for-each (lambda (step)
+	      (display "Statement: ") (display (car step)) (newline)
+	      (display "Premises: ") (display (cdr step)) (newline))
+	    argument))
+
+#| BACKEND |#
+
+(define rules (list))
 
 (define (derive-recursive procedure
 			  reversed-applicability
@@ -13,18 +39,29 @@
 			  sentences			  
 			  args)
   (if (null? reversed-applicability)
-      (apply procedure (cons derived args))
+      (let ((res (apply procedure (cons derived args))))
+	(if res
+	    (cons (list) res)
+	    #f))
       (let ((possibilities (filter (lambda (sentence)
 				     ((car reversed-applicability)
 				      (get-sentence sentence)))
 				   sentences)))
-	(find-first (lambda (sentence)
-		      (derive-recursive procedure
-					(cdr reversed-applicability)
-					derived
-					sentences
-					(cons sentence args)))
-		    possibilities))))
+	(let ((res (find-first (lambda (sentence)
+				 (derive-recursive procedure
+						   (cdr reversed-applicability)
+						   derived
+						   sentences
+						   (cons sentence args)))
+			       possibilities)))
+	  (if res
+	      (cons (cons (car res)
+			  (car (cdr res)))
+		    (cdr (cdr res)))
+	      #f)))))
+
+
+	
 
 (define (derive-general procedure
 			applicability
@@ -35,7 +72,7 @@
 		    derived
 		    sentences
 		    (list)))
-			
+
 (define (try-apply procedure
 		   applicability
 		   derived
@@ -46,6 +83,29 @@
 		       derived
 		       sentences)))
 
+(define (try-apply-rules rules
+			 derived
+			 sentences)
+  (let ((premises (find-first (lambda (rule)
+				(try-apply (second rule)
+					   (third rule)
+					   derived
+					   sentences))
+			      rules)))
+    (if premises
+	(cdr premises)
+	(list derived (list derived)))))
+
+(define (analyze-argument-recursive argument
+				    premise-sentences)
+  (if (null? argument)
+      premise-sentences
+      (let ((step (try-apply-rules rules
+				   (first argument)
+				   premise-sentences)))
+	(analyze-argument-recursive (cdr argument)
+				    (cons step premise-sentences)))))
+  
 (begin
   (define derived '(not (and a b)))
   (define alpha (list '(not (and (not a) (not b)))
@@ -64,33 +124,21 @@
   (write (cdr res)) (newline)
 )
 
-
 (begin
-  (define derived 'a)
-  (define sentences (list (list '(implies b a)
-			    '(p x))
-		      (list 'c
-			    '(q x))
-		      (list 'd
-			    '(r x))
-		      (list '(implies c a)
-			    '(s x))
-		      (list '(implies a a)
-			    '(t x))))
+  (reset-rules!)
+  (define-rule! 'modus-ponens
+	        modus-ponens
+	        (list true? implies? true?))
+  (define-rule! 'demorgans
+	        demorgans
+	        (list true? demorgans?))
   
-  (write (try-apply demorgans
-		    (list true? demorgans?)
-		    derived	    
-		    sentences))
-  (newline)
-  ;; #f
-	 
-  (write (try-apply modus-ponens
-		    (list true? implies? true?)
-		    derived
-		    sentences))
-  (newline)
-  ;; premise sentences - ((c (q x)) ((implies c a) (s x))
-  ;; premise set - q s x)
+  (define alpha '(implies phi psi))
+  (define beta 'phi)
+  (define gamma 'psi)
+  
+  (define res (analyze-argument (list alpha beta gamma)))
 
+  (describe-argument res)
 )
+  
