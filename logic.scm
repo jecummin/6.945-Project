@@ -229,11 +229,15 @@ premise set if derivation applies, #f otherwise
 ;; (implies? derived)
 ;; (sentence? phi)
 ;; (sentence? psi)
-(define (conditional-proof-rule derived phi psi phi-premise-set psi-premise-set)
+(define (conditional-proof-rule derived phi-and-premises psi-and-premises)
+  (let ((phi (car phi-and-premises))
+	(phi-premise-set (cadr phi-and-premises))
+	(psi (car psi-and-premises))
+	(psi-premise-set (cadr psi-and-premises)))
   (if (and (sentence-eqv? (first-argument derived) phi)
 	   (sentence-eqv? (second-argument derived) psi))
       (delete phi psi-premise-set)
-      #f))
+      #f)))
 
 #|
 (define der '(implies ((atomic a) (constant s)) ((atomic b) (constant s))))
@@ -241,34 +245,36 @@ premise set if derivation applies, #f otherwise
 (define phi '((atomic a) (constant s)))
 (define premise-set (list phi))
 
-(conditional-proof-rule der phi psi premise-set '())
+(conditional-proof-rule der (list phi '()) (list psi premise-set))
 ;Value: ()
 
 (define xi '((atomic a) (constant b)))
-(conditional-proof-rule der xi psi premise-set '())
+(conditional-proof-rule der (list xi '()) (list psi premise-set))
 ;Value: #f				;
 |#
 
 ;; universal-specification-applicability derived universal
 ;; (sentence? derived)
 ;; (universal? universal)
-(define (universal-specification-rule derived universal premise-set)
+(define (universal-specification-rule derived universal-and-premises)
+  (let ((universal (car universal-and-premises))
+	(premise-set (cadr universal-and-premises)))
   (if (is-substitution-instance?
        derived
        (second-argument universal)
        (first-argument universal))
       premise-set
-      #f))
+      #f)))
 
 #|
 (define der '((atomic a) (constant s)))
 (define uni '(universal (variable x) ((atomic a) (variable x))))
 (define premise-set '(((atomic b) (constant t))))
 
-(universal-specification-rule der uni premise-set)
+(universal-specification-rule der (list uni premise-set))
 ;Value: (((atomic b) (constant t)))
 
-(universal-specification-rule '((atomic b) (constant t)) uni premise-set)
+(universal-specification-rule '((atomic b) (constant t)) (list uni premise-set))
 ;Value: #f
 
 |#
@@ -286,7 +292,9 @@ premise set if derivation applies, #f otherwise
 (define (any bool-list)
   (reduce (lambda (x y) (or  x y)) #t bool-list))
 
-(define (universal-generalization-rule derived spec premise-set)
+(define (universal-generalization-rule derived (spec-and-premises))
+  (let ((spec (car spec-and-premises))
+	(premise-set (cadr spec-and-premises)))
   (let ((const (is-substitution-instance?
 		spec
 		(second-argument derived)
@@ -296,7 +304,7 @@ premise set if derivation applies, #f otherwise
 							      const)) premise-set))
 	    premise-set
 	    #f)
-	#f)))
+	#f))))
 
 
 #|
@@ -305,10 +313,10 @@ premise set if derivation applies, #f otherwise
 (define premise-set1 '(((atomic b) (constant t))))
 (define premise-set2 '(((atomic b) (constant s))))
 
-(universal-generalization-rule der spec premise-set1)
+(universal-generalization-rule der (list spec premise-set1))
 ;Value: (((atomic b) (constant t)))
 
-(universal-generalization-rule der  spec premise-set2)
+(universal-generalization-rule der (list spec premise-set2))
 ;Value: #f
 |#
 
@@ -329,7 +337,9 @@ premise set if derivation applies, #f otherwise
 both args must be qe-applicable
 
 |#
-(define (quantifier-exchange-rule derived sentence premise-set)
+(define (quantifier-exchange-rule derived sentence-and-premises)
+  (let ((sentence (car sentence-and-premises))
+	(premise-set (cadr sentence-and-premises)))
   (define (negated? x y)
     (and (negation? y)
     (sentence-eqv? x (first-argument y))))
@@ -362,7 +372,7 @@ both args must be qe-applicable
 	 ((negated? y x)  premise-set)
 	 (else #f))
 	#f))
-   (else #f)))
+   (else #f))))
 
 
 ;;; TC ugh I'll do it later
@@ -373,13 +383,15 @@ both args must be qe-applicable
 ;; existential-generalization-applicability derived spec
 ;; (existential? derived)
 ;; (sentence? spec)
-(define (existential-generalization-rule derived spec premise-set)
+(define (existential-generalization-rule derived spec-and-premises)
+  (let ((spec (car spec-and-premises))
+	(premise-set (cadr spec-and-premises)))
   (if (is-substitution-instance?
        spec
        (second-argument derived)
        (first-argument derived))
       premise-set
-      #f))
+      #f)))
 
 #|
 (define spec1 '((atomic a) (constant s)))
@@ -387,10 +399,10 @@ both args must be qe-applicable
 (define der '(existential (variable x) ((atomic a) (variable x))))
 (define premise-set '(((atomic b) (constant t))))
 
-(existential-generalization-rule der spec1 premise-set)
+(existential-generalization-rule der (list spec1 premise-set))
 ;Value: (((atomic b) (constant t)))
 
-(existential-generalization-rule der spec2 premise-set)
+(existential-generalization-rule der (list spec2 premise-set))
 ;Value: #f
 |#
 
@@ -415,10 +427,12 @@ both args must be qe-applicable
 
 
 (define (existential-specification-rule derived
-					existential
-					psi
-					existential-premise-set
-					psi-premise-set)
+					existential-and-premises
+					psi-and-premises)
+  (let ((existential (car existential-and-premises))
+	(existential-premise-set (cadr existential-and-premises))
+	(psi (car psi-and-premises))
+	(psi-premise-set cadr (psi-premise-set)))
   (if (not (equal? derived psi))
       #f
       (let ((subs (which (map (lambda (x) (is-substitution-instance?
@@ -439,7 +453,7 @@ both args must be qe-applicable
 		 (write (map (lambda (x) (contains-term? x const)) lmbda))
 		  (if (none (map (lambda (x) (contains-term? x const)) lmbda))
 		      (append existential-premise-set lmbda)
-		      #f)))))))
+		      #f))))))))
 
 
 #|
