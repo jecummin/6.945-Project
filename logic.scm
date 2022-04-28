@@ -1,9 +1,4 @@
-;; (load "~/workspace/6945/sdf/manager/load")
-;; (manage 'new 'user-defined-types)
-
-
-(define (tag x)
-  (car x))
+(load "backbone.scm")
 
 (define (arguments x)
   (cdr x))
@@ -209,15 +204,13 @@
 |#
 
 
-;;;(define (premise-induction premise-set)) ?????
-
 
 #|
 rule schema:
 
 generic procedure
 takes 
-   - number of sentences to look at
+   - argument name
    - initial applicability of said sentences (1st is derived sentence,
      2nd are possible dependencies)
    - procedure that takes sentences and premise set and returns new
@@ -238,6 +231,11 @@ premise set if derivation applies, #f otherwise
 	   (sentence-eqv? (second-argument derived) psi))
       (delete phi psi-premise-set)
       #f)))
+
+(define-rule!
+  'conditional-proof
+  conditional-proof-rule
+  (list implies? sentence? sentence?))
 
 #|
 (define der '(implies ((atomic a) (constant s)) ((atomic b) (constant s))))
@@ -266,6 +264,11 @@ premise set if derivation applies, #f otherwise
       premise-set
       #f)))
 
+(define-rule!
+  'universal-specification
+  universal-specification-rule
+  (list sentence? universal?))
+
 #|
 (define der '((atomic a) (constant s)))
 (define uni '(universal (variable x) ((atomic a) (variable x))))
@@ -292,7 +295,7 @@ premise set if derivation applies, #f otherwise
 (define (any bool-list)
   (reduce (lambda (x y) (or  x y)) #t bool-list))
 
-(define (universal-generalization-rule derived (spec-and-premises))
+(define (universal-generalization-rule derived spec-and-premises)
   (let ((spec (car spec-and-premises))
 	(premise-set (cadr spec-and-premises)))
   (let ((const (is-substitution-instance?
@@ -306,6 +309,11 @@ premise set if derivation applies, #f otherwise
 	    #f)
 	#f))))
 
+
+(define-rule!
+  'universal-generalization
+  universal-generalization-rule
+  (list universal? sentence?))
 
 #|
 (define spec '((atomic a) (constant s)))
@@ -327,56 +335,165 @@ premise set if derivation applies, #f otherwise
 
 #|
 ;; universal-specification-applicability derived sentence
- (define (qe-applicable? x) 
-   (or 
-    (or (universal? x) 
-	(and (negation? x) (universal? (first-argument x))))
-    (or (existential? x) 
-	(and (negation? x) (existential? (first-argument x))))))
-
 both args must be qe-applicable
-
 |#
+
+(define (qe-applicable? x) 
+  (or 
+   (or (universal? x) 
+       (and (not? x) (universal? (first-argument x))))
+   (or (existential? x) 
+       (and (not? x) (existential? (first-argument x))))))
+
+(define (negated? x y)
+    (and (not? y)
+	 (sentence-eqv? x (first-argument y))))
+
 (define (quantifier-exchange-rule derived sentence-and-premises)
   (let ((sentence (car sentence-and-premises))
-	(premise-set (cadr sentence-and-premises)))
-  (define (negated? x y)
-    (and (negation? y)
-    (sentence-eqv? x (first-argument y))))
+ 	(premise-set (cadr sentence-and-premises)))
+
   (cond
-   ((universal? x)
-    (if (and (negation? y) (existential? (first-argument y)))
+   ((universal? derived)
+    (if (and (not? sentence) (existential? (first-argument sentence)))
 	(cond
-	 ((negated? x y)  premise-set)
-	 ((negated? y x)  premise-set)
+	 ((negated? (second-argument derived)
+		    (second-argument (first-argument sentence)))  premise-set)
+	 ((negated? (second-argument (first-argument sentence))
+		    (second-argument derived))  premise-set)
 	 (else #f))
 	#f))
-   ((and (negation? x) (universal? (first-argument x)))
-    (if (existential? y)
+   ((and (not? derived) (universal? (first-argument derived)))
+    (if (existential? sentence)
 	(cond
-	 ((negated? x y)  premise-set)
-	 ((negated? y x)  premise-set)
+	 ((negated? (second-argument (first-argument derived))
+		    (second-argument sentence))  premise-set)
+	 ((negated? (second-argument sentence)
+		    (second-argument (first-argument derived)))  premise-set)
 	 (else #f))
 	#f))
-   ((existential? x)
-    (if (and (negation? y) (universal? (first-argument y)))
+   ((existential? derived)
+    (if (and (not? sentence) (universal? (first-argument sentence)))
 	(cond
-	 ((negated? x y)  premise-set)
-	 ((negated? y x)  premise-set)
+	 ((negated? (second-argument derived)
+		    (second-argument (first-argument sentence)))  premise-set)
+	 ((negated? (second-argument (first-argument sentence))
+		    (second-argument derived))  premise-set)
 	 (else #f))
 	#f))
-   ((and (negation? x) (existential? (first-argument x)))
-        (if (universal? y)
+   ((and (not? derived) (existential? (first-argument derived)))
+        (if (universal? sentence)
 	(cond
-	 ((negated? x y)  premise-set)
-	 ((negated? y x)  premise-set)
+	 ((negated? (second-argument (first-argument derived))
+		    (second-argument sentence))  premise-set)
+	 ((negated? (second-argument sentence)
+		    (second-argument (first-argument derived)))  premise-set)
 	 (else #f))
 	#f))
    (else #f))))
 
+(define-rule!
+  'quantifier-exchange
+  quantifier-exchange-rule
+  (list qe-applicable? qe-applicable?))
+
+
+#|
+(define premise-set '(this-is-a-premise-set))
+
+(define der1 '(universal (variable x) ((atomic A) (variable x))))
+(define prem1 '(lnot (existential (variable x) (lnot ((atomic A) (variable x))))))
+
+(define der2 '(lnot (universal (variable x) ((atomic A) (variable x)))))
+(define prem2 '(existential (variable x) (lnot ((atomic A) (variable x)))))
+
+(define der3 '(universal (variable x) (lnot ((atomic A) (variable x)))))
+(define prem3 '(lnot (existential (variable x) ((atomic A) (variable x)))))
+
+(define der4 '(lnot (universal (variable x) (lnot ((atomic A) (variable x))))))
+(define prem4 '(existential (variable x) ((atomic A) (variable x))))
+
+(quantifier-exchange-rule der1 (list prem1 premise-set))
+(quantifier-exchange-rule prem1 (list der1 premise-set))
+(quantifier-exchange-rule der2 (list prem2 premise-set))
+(quantifier-exchange-rule prem2 (list der2 premise-set))
+(quantifier-exchange-rule der3 (list prem3 premise-set))
+(quantifier-exchange-rule prem3 (list der3 premise-set))
+(quantifier-exchange-rule der4 (list prem4 premise-set))
+(quantifier-exchange-rule prem4 (list der4 premise-set))
+|#
 
 ;;; TC ugh I'll do it later
 
+(define (tc-rule-1 derived conj-and-premises)
+  (let ((conj (car conj-and-premises))
+	(premise-set (cadr conj-and-premises)))	      
+    (if (or (sentence-eqv? derived (first-argument conj))
+	    (sentence-eqv? derived (second-argument conj)))
+	premise-set
+	#f)))
+
+(define-rule!
+  'tautological-consequence
+  tc-rule-1
+  (list sentence? and?))
+
+#|
+(define der '((atomic a) (constant s)))
+(define conj1 '(and ((atomic b) (constant s)) ((atomic a) (constant s))))
+(define conj2 '(and ((atomic a) (constant s)) ((atomic b) (constant s))))
+
+(tc-rule-1 der (list conj1 '()))
+(tc-rule-1 der (list conj2 '()))
+|#
+
+(define (negated-pair? x y)
+  (or (negated? x y) (negated? y x)))
+
+(define (tc-rule-2 derived disj-and-premises sent-and-premises)
+  (let ((disj (car disj-and-premises))
+	(disj-premise-set (cadr disj-and-premises))
+	(sent (car sent-and-premises))
+	(sent-premise-set (cadr sent-and-premises)))
+    (cond
+     ((sentence-eqv? derived (first-argument disj))
+      (if (negated-pair? sent (second-argument disj))
+	  (lset-union disj-premise-set sent-premise-set)
+	  #f))
+     ((sentence-eqv? derived (second-argument disj))
+      (if (negated-pair? sent (first-argument disj))
+	  (lset-union disj-premise-set sent-premise-set)
+	  #f))
+     (else #f))))
+
+(define-rule!
+  'tautological-consequence
+  tc-rule-2
+  (list sentence? or? sentence?))
+
+(define (tc-rule-3 derived imp-and-premises sent-and-premises)
+  (let ((imp (car imp-and-premises))
+	(imp-premise-set (cadr imp-and-premises))
+	(sent (car sent-and-premises))
+	(sent-premise-set (cadr sent-and-premises)))
+    (if (sentence-eqv? derived (second-argument imp))
+	(if (sentence-eqv? sent (first-argument imp))
+	    (lset-union imp-premise-set sent-premise-set)
+	    #f)
+	#f)))
+
+(define-rule!
+  'tautological-consequence
+  tc-rule-3
+  (list sentence? implies? sentence?))
+
+#|
+(define der '((atomic a) (constant s)))
+(define imp '(implies ((atomic b) (constant s)) ((atomic a) (constant s))))
+(define sent '((atomic b) (constant s)))
+
+(tc-rule-3 der (list imp '()) (list sent '()))
+|#
 
 
 
@@ -392,6 +509,11 @@ both args must be qe-applicable
        (first-argument derived))
       premise-set
       #f)))
+
+(define-rule!
+  'existential-generalization
+  existential-generalization-rule
+  (list existential? sentence?))
 
 #|
 (define spec1 '((atomic a) (constant s)))
@@ -432,7 +554,7 @@ both args must be qe-applicable
   (let ((existential (car existential-and-premises))
 	(existential-premise-set (cadr existential-and-premises))
 	(psi (car psi-and-premises))
-	(psi-premise-set cadr (psi-premise-set)))
+	(psi-premise-set (cadr psi-premise-set)))
   (if (not (equal? derived psi))
       #f
       (let ((subs (which (map (lambda (x) (is-substitution-instance?
@@ -440,7 +562,6 @@ both args must be qe-applicable
 				    (second-argument existential)
 				    (first-argument existential)))
 		       psi-premise-set))))
-	(write-line subs)
 	(cond
 	 ((= (length subs) 0) #f)
 	 ((> (length subs) 1) #f)
@@ -449,11 +570,15 @@ both args must be qe-applicable
 			      (second-argument existential)
 			      (first-argument existential)))
 		     (lmbda (delete-i psi-premise-set (car subs))))
-		 (write const)
-		 (write (map (lambda (x) (contains-term? x const)) lmbda))
 		  (if (none (map (lambda (x) (contains-term? x const)) lmbda))
 		      (append existential-premise-set lmbda)
 		      #f))))))))
+
+
+(define-rule!
+  'existential-specification
+  existential-specification-rule
+  (list sentence? existential? sentence?))
 
 
 #|
