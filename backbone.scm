@@ -9,11 +9,11 @@
 ; Adds a rule
 (define (define-rule!
 	  name
-	  applicability
-	  procedure)
+	  procedure
+	  applicability)
   (set! rules (cons (list name
-			  applicability
-			  procedure)
+			  procedure
+			  applicability)
 		    rules)))
 
 ; Analyzes an argument (list of sentences) using defined rules
