@@ -18,18 +18,34 @@
 
 ; Analyzes an argument (list of sentences) using defined rules
 (define (analyze-argument argument)
-  (reverse (analyze-argument-recursive argument
-				       (list))))
+  (let lp ((argument argument)
+	   (premises (list)))
+    (if (null? argument)
+	(reverse premises)
+	(let ((step (try-apply-rules rules
+				   (first argument)
+				   premises)))
+	  (lp (cdr argument)
+	      (cons step premises))))))
 
 ; Prints the argument in a more user-friendly format
 (define (describe-argument argument)
   (display "\nArgument:\n")
   (for-each (lambda (step)
 	      (display "Statement: ") (display (first step)) (newline)
-	      (display "Premise Set: ") (display (second step)) (newline)
+	      (display "Premise Set: ") (newline)
+	      (for-each (lambda (premise)
+			  (display " - ")
+			  (display premise)
+			  (newline))
+			(second step))
 	      (display "Rule: ") (display (third step)) (newline)
-	      (display "Premise Sentences: ")
-	      (display (map car (fourth step))) (newline)
+	      (display "Premise Sentences: ") (newline)
+	      (for-each (lambda (premise-sentence)
+			  (display " - ")
+			  (display premise-sentence)
+			  (newline))
+			(map car (fourth step)))
 	      (newline))
 	    argument))
 
@@ -41,48 +57,36 @@
 ;;; Otherwise returns pair
 ;;; car is the list of premise sentences
 ;;; cdr is the premise set
-(define (derive-recursive procedure
-			  reversed-applicability
-			  derived
-			  sentences			  
-			  args)
-  (if (null? reversed-applicability)
-      (let ((res (apply procedure (cons derived args))))
-	(if res
-	    (cons (list) res)
-	    #f))
-      (let ((possibilities (filter (lambda (sentence)
-				     ((car reversed-applicability)
-				      (get-sentence sentence)))
-				   sentences)))
-	(let ((res (find-first (lambda (sentence)
-				 (derive-recursive procedure
-						   (cdr reversed-applicability)
-						   derived
-						   sentences
-						   (cons sentence args)))
-			       possibilities)))
-	  (if res
-	      (cons (cons (car res)
-			  (car (cdr res)))
-		    (cdr (cdr res)))
-	      #f)))))
-
-
-;;; Returns false if rule is not applicable
-;;; Otherwise returns pair
-;;; car is the list of premise sentences
-;;; cdr is the premise set
 (define (derive-general procedure
-			applicability
-			derived
-			sentences)
-  (derive-recursive procedure
-		    (reverse applicability)
-		    derived
-		    sentences
-		    (list)))
-
+			  applicability
+			  derived
+			  sentences)
+  (let lp ((procedure procedure)
+	   (reversed-applicability (reverse applicability))
+	   (derived derived)
+	   (sentences sentences)
+	   (args (list)))			   
+    (if (null? reversed-applicability)
+	(let ((res (apply procedure (cons derived args))))
+	  (if res
+	      (cons (list) res)
+	      #f))
+	(let ((possibilities (filter (lambda (sentence)
+				       ((car reversed-applicability)
+					(get-sentence sentence)))
+				     sentences)))
+	  (let ((res (find-first (lambda (sentence)
+				   (lp procedure
+				       (cdr reversed-applicability)
+				       derived
+				       sentences
+				       (cons sentence args)))
+				 possibilities)))
+	    (if res
+		(cons (cons (car res)
+			    (car (cdr res)))
+		      (cdr (cdr res)))
+		#f))))))
 
 ;;; Returns false if rule is not applicable
 ;;; Otherwise returns pair
@@ -98,12 +102,14 @@
 		       derived
 		       sentences)))
 
-;;; Returns false if no rules are applicable
-;;; Otherwise returns a list of length 4:
+;;; Returns a list of length 4:
 ;;; - derived sentence
 ;;; - premise set
 ;;; - rule name
 ;;; - premise sentences
+;;; If no rules are applicable,
+;;; The derived sentence is the premise for itself
+;;; (And the rule name will be 'premise-induction)
 (define (try-apply-rules rules
 			 derived
 			 sentences)
@@ -113,7 +119,7 @@
 				(third rule)
 				derived
 				(map (lambda (sentence)
-				       (cons (first sentence)
+				       (list (first sentence)
 					     (second sentence)))
 				     sentences)))
 		   rules)))
@@ -127,34 +133,6 @@
 	      'premise-induction
 	      (list (cons derived
 			  (list derived)))))))
-
-(define (analyze-argument-recursive argument
-				    premise-sentences)
-  (if (null? argument)
-      premise-sentences
-      (let ((step (try-apply-rules rules
-				   (first argument)
-				   premise-sentences)))
-	(analyze-argument-recursive (cdr argument)
-				    (cons step premise-sentences)))))
-  
-(begin
-  (define derived '(not (and a b)))
-  (define alpha (list '(not (and (not a) (not b)))
-		      '(a w)))
-  (define beta (list '(or a b)
-		     '(b x)))
-  (define gamma (list '(or (not a) (not b))
-		      '(c y)))
-  (define delta (list '(not (and a b))
-		      '(d z)))
-  (define res (derive-general demorgans
-			      (list demorgans?)
-			      derived
-			      (list alpha beta gamma)))
-  (write (car res)) (newline)
-  (write (cdr res)) (newline)
-)
 
 (begin
   (reset-rules!)

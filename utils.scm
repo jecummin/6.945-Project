@@ -10,8 +10,8 @@
 
 (define true? (lambda (x) #t))
 
-(define (get-sentence sentence) (car sentence))
-(define (get-premise-set sentence) (cdr sentence))
+(define (get-sentence sentence) (first sentence))
+(define (get-premise-set sentence) (second sentence))
 
 ;;; These aren't really utils
 ;;; But used for testing backbone.scm
