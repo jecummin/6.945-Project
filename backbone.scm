@@ -25,14 +25,22 @@
 (define (describe-argument argument)
   (display "\nArgument:\n")
   (for-each (lambda (step)
-	      (display "Statement: ") (display (car step)) (newline)
-	      (display "Premises: ") (display (cdr step)) (newline))
+	      (display "Statement: ") (display (first step)) (newline)
+	      (display "Premise Set: ") (display (second step)) (newline)
+	      (display "Rule: ") (display (third step)) (newline)
+	      (display "Premise Sentences: ")
+	      (display (map car (fourth step))) (newline)
+	      (newline))
 	    argument))
 
 #| BACKEND |#
 
 (define rules (list))
 
+;;; Returns false if rule is not applicable
+;;; Otherwise returns pair
+;;; car is the list of premise sentences
+;;; cdr is the premise set
 (define (derive-recursive procedure
 			  reversed-applicability
 			  derived
@@ -61,8 +69,10 @@
 	      #f)))))
 
 
-	
-
+;;; Returns false if rule is not applicable
+;;; Otherwise returns pair
+;;; car is the list of premise sentences
+;;; cdr is the premise set
 (define (derive-general procedure
 			applicability
 			derived
@@ -73,6 +83,11 @@
 		    sentences
 		    (list)))
 
+
+;;; Returns false if rule is not applicable
+;;; Otherwise returns pair
+;;; car is the list of premise sentences
+;;; cdr is the premise set
 (define (try-apply procedure
 		   applicability
 		   derived
@@ -83,18 +98,35 @@
 		       derived
 		       sentences)))
 
+;;; Returns false if no rules are applicable
+;;; Otherwise returns a list of length 4:
+;;; - derived sentence
+;;; - premise set
+;;; - rule name
+;;; - premise sentences
 (define (try-apply-rules rules
 			 derived
 			 sentences)
-  (let ((premises (find-first (lambda (rule)
-				(try-apply (second rule)
-					   (third rule)
-					   derived
-					   sentences))
-			      rules)))
+  (let ((premises (find-first
+		   (lambda (rule)
+		     (try-apply (second rule)
+				(third rule)
+				derived
+				(map (lambda (sentence)
+				       (cons (first sentence)
+					     (second sentence)))
+				     sentences)))
+		   rules)))
     (if premises
-	(cdr premises)
-	(list derived (list derived)))))
+	(list derived
+	      (cdr (cdr premises))
+	      (first (car premises))
+	      (car (cdr premises)))
+	(list derived
+	      (list derived)
+	      'premise-induction
+	      (list (cons derived
+			  (list derived)))))))
 
 (define (analyze-argument-recursive argument
 				    premise-sentences)
@@ -134,10 +166,16 @@
 	        (list true? demorgans?))
   
   (define alpha '(implies phi psi))
-  (define beta 'phi)
-  (define gamma 'psi)
+  (define beta '(implies psi upsilon))
+  (define gamma 'phi)
+  (define delta 'psi)
+  (define epsilon 'upsilon)
   
-  (define res (analyze-argument (list alpha beta gamma)))
+  (define res (analyze-argument (list alpha
+				      beta
+				      gamma
+				      delta
+				      epsilon)))
 
   (describe-argument res)
 )
