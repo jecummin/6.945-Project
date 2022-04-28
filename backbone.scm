@@ -2,11 +2,11 @@
 
 #| INTERFACE |#
 
-; Resets the list of rules
+;;; Resets the list of rules
 (define (reset-rules!)
   (set! rules (list)))
 
-; Adds a rule
+;;; Adds a rule
 (define (define-rule!
 	  name
 	  procedure
@@ -16,19 +16,20 @@
 			  applicability)
 		    rules)))
 
-; Analyzes an argument (list of sentences) using defined rules
+;;; Analyzes an argument (list of sentences) using defined rules
 (define (analyze-argument argument)
   (let lp ((argument argument)
 	   (premises (list)))
     (if (null? argument)
 	(reverse premises)
 	(let ((step (try-apply-rules rules
-				   (first argument)
-				   premises)))
+				     (car argument)
+				     premises)))
 	  (lp (cdr argument)
 	      (cons step premises))))))
 
-; Prints the argument in a more user-friendly format
+;;; Prints the argument analysis in a more user-friendly format
+;;; (The result of analyze-argument)
 (define (describe-argument argument)
   (display "\nArgument:\n")
   (for-each (lambda (step)
@@ -45,7 +46,7 @@
 			  (display " - ")
 			  (display premise-sentence)
 			  (newline))
-			(map car (fourth step)))
+			(map car (reverse (fourth step))))
 	      (newline))
 	    argument))
 
@@ -58,9 +59,9 @@
 ;;; car is the list of premise sentences
 ;;; cdr is the premise set
 (define (derive-general procedure
-			  applicability
-			  derived
-			  sentences)
+			applicability
+			derived
+			sentences)
   (let lp ((procedure procedure)
 	   (reversed-applicability (reverse applicability))
 	   (derived derived)
@@ -111,28 +112,30 @@
 ;;; The derived sentence is the premise for itself
 ;;; (And the rule name will be 'premise-induction)
 (define (try-apply-rules rules
-			 derived
-			 sentences)
-  (let ((premises (find-first
-		   (lambda (rule)
-		     (try-apply (second rule)
-				(third rule)
-				derived
-				(map (lambda (sentence)
-				       (list (first sentence)
-					     (second sentence)))
-				     sentences)))
-		   rules)))
-    (if premises
-	(list derived
-	      (cdr (cdr premises))
-	      (first (car premises))
-	      (car (cdr premises)))
-	(list derived
-	      (list derived)
-	      'premise-induction
-	      (list (cons derived
-			  (list derived)))))))
+			 target
+			 derivations)
+  (let ((sentences-and-premises
+	 (map (lambda (derivation)
+		(list (derivation-sentence derivation)
+		      (derivation-premise-set derivation)))
+	      derivations)))
+    (let ((inference
+	   (find-first (lambda (rule)
+			 (try-apply (rule-procedure rule)
+				    (rule-applicability rule)
+				    target
+				    sentences-and-premises))
+		       rules)))
+      (if inference
+	  (list target
+		(inference-premise-set inference)
+		(inference-rule-name inference)
+		(inference-premise-sentences inference))
+	  (list target
+		(list target)
+		'premise-induction
+		(list (cons target
+			    (list target))))))))
 
 (begin
   (reset-rules!)

@@ -13,6 +13,19 @@
 (define (get-sentence sentence) (first sentence))
 (define (get-premise-set sentence) (second sentence))
 
+(define (rule-name rule) (first rule))
+(define (rule-procedure rule) (second rule))
+(define (rule-applicability rule) (third rule))
+
+(define derivation-sentence first)
+(define derivation-premise-set second)
+(define derivation-rule third)
+(define derivation-premise-sentences fourth)
+			    
+(define (inference-premise-set inference) (cdr (cdr inference)))
+(define (inference-rule-name inference) (rule-name (car inference)))
+(define (inference-premise-sentences inference) (car (cdr inference)))
+
 ;;; These aren't really utils
 ;;; But used for testing backbone.scm
 (define (demorgans
