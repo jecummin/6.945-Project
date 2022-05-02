@@ -77,8 +77,30 @@
 
 ;; the-word-is-true-applicability target
 ;; (the-word? target)
-(define (the-word-is-true-rule target)
+(define (the-word-is-true-rule-1 target)
   '())
+
+
+(define-rule!
+  'the-word-is-true
+  the-word-is-true-rule-1
+  (list the-word?))
+
+(define (the-word-contents x)
+  (cddr x))
+
+(define (the-word-is-true-rule-2 target word-and-premises)
+  (let ((word (car word-and-premises))
+	(word-premise-set (cadr word-and-premises)))
+    (if (sentence-eqv? target (the-word-contents word))
+	'()
+	#f)))
+
+
+(define-rule!
+  'the-word-is-true
+  the-word-is-true-rule-2
+  (list sentence? the-word?))
 
 ;; theologian-and-applicability target conj
 ;; (sentence? target)
@@ -89,9 +111,14 @@
     (cond
      ((sentence-eqv? target (and-first conj)) premise-set)
      ((sentence-eqv? target (and-second conj)) premise-set)
-     #f)))
+     (else #f))))
 
+(define-rule!
+  'theologian-and
+  theologian-and-rule
+  (list sentence? and?))
 
+  
 ;; theologian-or-applicability target disj sent
 ;; (sentence? target)
 ;; (or? disj)
@@ -110,6 +137,12 @@
 	#f)))
 
 
+(define-rule!
+  'theologian-or
+  theologian-or-rule
+  (list sentence? or? sentence?))
+
+
 
 ;; theologian-therefore-applicability derived phi chi
 ;; (therefore? derived)
@@ -124,3 +157,8 @@
 	   (sentence-eqv? (therefore-second derived) psi))
       (append phi-premise-set  psi-premise-set) ;; Not the same as CP !!
       #f)))
+
+(define-rule!
+  'theologian-therefore
+  theologian-therefore-rule
+  (list therefore? sentence? sentence?))
