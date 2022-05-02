@@ -13,6 +13,9 @@
 (define (get-sentence sentence) (car sentence))
 (define (get-premise-set sentence) (cdr sentence))
 
+(define (tag x)
+  (car x))
+
 ;;; These aren't really utils
 ;;; But used for testing backbone.scm
 (define (demorgans
