@@ -1,6 +1,6 @@
 (load "backbone")
 (load "logic")
-;; (load "theology")
+(load "theology")
 
 
 
@@ -37,11 +37,24 @@
 	'((atomic w) (constant s))
 	'(lnot ((atomic f) (constant s)))
 	'((atomic a) (constant s))
-	'(land ((atomic a) (constant s)) ((atomic f) (constant s)))
+	'(land ((atomic a) (constant s)) (lnot ((atomic f) (constant s))))
 	'(existential (variable x) (land ((atomic a) (variable x))
-					 ((atomic f) (constant s))))
+					 (lnot ((atomic f) (constant s)))))
 	'(existential (variable x) (land ((atomic a) (variable x))
-					 ((atomic f) (constant s))))))
+					 (lnot ((atomic f) (constant s)))))))
 			     
 (define result (analyze-argument not-all-aquatic-animals-are-fish))
+(describe-argument result)
+
+
+;;; Theological example. The same system can do both languages!
+
+(define water-is-good-for-you
+  (list '(Scripture teaches water is good for you and theology is good
+		    for you)
+	'(Water is good for you and theology is good for you)
+	'(Water is good for you)))
+
+
+(define result (analyze-argument water-is-good-for-you))
 (describe-argument result)
