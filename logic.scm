@@ -300,7 +300,7 @@ premise set if derivation applies, #f otherwise
   (not (any bool-list)))
 
 (define (any bool-list)
-  (reduce (lambda (x y) (or  x y)) #t bool-list))
+  (reduce (lambda (x y) (or  x y)) #f bool-list))
 
 (define (universal-generalization-rule derived spec-and-premises)
   (let ((spec (car spec-and-premises))

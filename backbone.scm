@@ -88,9 +88,10 @@
 	   (args (list)))			   
     (if (null? reversed-applicability)
 	(let ((res (apply procedure (cons derived args))))
-	  (if res
-	      (cons (list) res)
-	      #f))
+	  (and res
+	       (write "result: ") (write res) (newline)
+	       (not (member (list derived res) sentences))
+	       (cons (list) res)))
 	(let ((possibilities (filter (lambda (sentence)
 				       ((car reversed-applicability)
 					(get-sentence sentence)))
@@ -175,8 +176,8 @@
 				      beta
 				      gamma
 				      delta
+				      epsilon
 				      epsilon)))
 
-  ;(describe-argument res)
+  (describe-argument res)
 )
-  
