@@ -32,8 +32,25 @@
 ;;; (The result of analyze-argument)
 (define (describe-argument argument)
   (display "\nArgument:\n")
-  (for-each (lambda (step)
-	      (display "Statement: ") (display (first step)) (newline)
+  (for-each describe-step argument))
+
+;; Prints each step as it is generated
+;; (Useful for debugging in case of an error)
+(define (describe-and-analyze-argument argument)
+  (let lp ((argument argument)
+	   (premises (list)))
+    (if (null? argument)
+	(reverse premises)
+	(let ((step (try-apply-rules rules
+				     (car argument)
+				     premises)))
+	  (describe-step step)
+	  (lp (cdr argument)
+	      (cons step premises))))))
+
+;;; Prints single step of an argument
+(define (describe-step step)
+  (display "Statement: ") (display (first step)) (newline)
 	      (display "Premise Set: ") (newline)
 	      (for-each (lambda (premise)
 			  (display " - ")
@@ -48,7 +65,9 @@
 			  (newline))
 			(map car (reverse (fourth step))))
 	      (newline))
-	    argument))
+    
+    
+  
 
 #| BACKEND |#
 
@@ -158,6 +177,6 @@
 				      delta
 				      epsilon)))
 
-  (describe-argument res)
+  ;(describe-argument res)
 )
   
