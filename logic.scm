@@ -36,10 +36,10 @@
    (atomic? (car x))
    (constant? (first-argument x))))
 
-(define (and? x)
+(define (land? x)
   (eqv? (tag x) 'land))
 
-(define (or? x)
+(define (lor? x)
   (eqv? (tag x) 'lor))
 
 (define (not? x)
@@ -52,7 +52,7 @@
   (eqv? (tag x) 'iff))
 
 (define (connective? x)
-  (or (and? x) (or? x) (not? x) (implies? x) (iff? x)))
+  (or (land? x) (lor? x) (not? x) (implies? x) (iff? x)))
 
 (define (binary-connective? x)
   (and (connective? x) (not (not? x))))
@@ -337,9 +337,6 @@ premise set if derivation applies, #f otherwise
 
 
 
-
-;;; QE ugh I'll do it later
-
 #|
 ;; universal-specification-applicability derived sentence
 both args must be qe-applicable
@@ -430,7 +427,6 @@ both args must be qe-applicable
 (quantifier-exchange-rule prem4 (list der4 premise-set))
 |#
 
-;;; TC ugh I'll do it later
 
 (define (tc-rule-1 derived conj-and-premises)
   (let ((conj (car conj-and-premises))
@@ -443,7 +439,7 @@ both args must be qe-applicable
 (define-rule!
   'tautological-consequence
   tc-rule-1
-  (list sentence? and?))
+  (list sentence? land?))
 
 #|
 (define der '((atomic a) (constant s)))
@@ -476,7 +472,7 @@ both args must be qe-applicable
 (define-rule!
   'tautological-consequence
   tc-rule-2
-  (list sentence? or? sentence?))
+  (list sentence? lor? sentence?))
 
 (define (tc-rule-3 derived imp-and-premises sent-and-premises)
   (let ((imp (car imp-and-premises))
@@ -521,17 +517,37 @@ both args must be qe-applicable
 (define-rule!
   'tautological-consequence
   tc-rule-4
-  (list sentence? not? sentence?))
+  (list sentence? (lambda (x) (and (not? x) (land? (first-argument x)))) sentence?))
 
 #|
 (define der '(lnot ((atomic f) (constant s))))
-(define nconj 	 '(lnot (land ((atomic f) (constant s)) ((atomic w)
-
-(constant s)))))
+(define nconj 	 '(lnot (land ((atomic f) (constant s)) ((atomic w) (constant s)))))
 (define sent 	 '((atomic w) (constant s)))
 
 (tc-rule-4 der (list nconj '()) (list sent '()))
 |#
+
+(define (tc-rule-5 derived sent1-and-premises sent2-and-premises)
+  (let ((sent1 (car sent1-and-premises))
+	(sent1-premise-set (cadr sent1-and-premises))
+	(sent2 (car sent2-and-premises))
+	(sent2-premise-set (cadr sent2-and-premises)))
+    (if (or
+	 (and (sentence-eqv? (first-argument derived) sent1)
+	      (sentence-eqv? (second-argument derived) sent2))
+	 (and (sentence-eqv? (first-argument derived) sent2)
+	      (sentence-eqv? (second-argument derived) sent1)))
+	(lset-union sent1-premise-set sent2-premise-set)
+	#f)))
+
+#|
+
+|#
+
+(define-rule!
+  'tautological-consequence
+  tc-rule-5
+  (list land? sentence? sentence?))
 
 
 ;; existential-generalization-applicability derived spec
