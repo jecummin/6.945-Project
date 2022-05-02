@@ -160,7 +160,7 @@
    ((binary-connective? sent) (append (get-constants (first-argument
 						   sent))
 				  (get-constants (second-argument sent))))
-   ((not? sent) (get-constants sent))
+   ((not? sent) (get-constants (first-argument sent)))
    ((atomic-sentence? sent) (list (first-argument sent)))
    ((atomic-formula? sent) '())
    (else (error "Unknown sentence type"))))
@@ -280,6 +280,13 @@ premise set if derivation applies, #f otherwise
 (universal-specification-rule '((atomic b) (constant t)) (list uni premise-set))
 ;Value: #f
 
+
+(define u '(universal (variable x)
+		    (lnot (land ((atomic f) (variable x))
+				((atomic w) (variable x))))))
+(define d	'(lnot (land ((atomic f) (constant s))
+		     ((atomic w) (constant s)))))
+(universal-specification-rule d (list u '()))
 |#
 
 ;; universal-generalization-applicability derived spec
@@ -495,6 +502,36 @@ both args must be qe-applicable
 (tc-rule-3 der (list imp '()) (list sent '()))
 |#
 
+(define (tc-rule-4 derived nconj-and-premises sent-and-premises)
+  (let ((conj (first-argument (car nconj-and-premises)))
+	(conj-premise-set (cadr nconj-and-premises))
+	(sent (car sent-and-premises))
+	(sent-premise-set (cadr sent-and-premises)))
+    (cond
+     ((sentence-eqv? sent (first-argument conj))
+      (if (negated-pair? derived (second-argument conj))
+	  (lset-union conj-premise-set sent-premise-set)
+	  #f))
+     ((sentence-eqv? sent (second-argument conj))
+      (if (negated-pair? derived (first-argument conj))
+	  (lset-union conj-premise-set sent-premise-set)
+	  #f))
+     (else #f))))
+
+(define-rule!
+  'tautological-consequence
+  tc-rule-4
+  (list sentence? not? sentence?))
+
+#|
+(define der '(lnot ((atomic f) (constant s))))
+(define nconj 	 '(lnot (land ((atomic f) (constant s)) ((atomic w)
+
+(constant s)))))
+(define sent 	 '((atomic w) (constant s)))
+
+(tc-rule-4 der (list nconj '()) (list sent '()))
+|#
 
 
 ;; existential-generalization-applicability derived spec
@@ -554,7 +591,7 @@ both args must be qe-applicable
   (let ((existential (car existential-and-premises))
 	(existential-premise-set (cadr existential-and-premises))
 	(psi (car psi-and-premises))
-	(psi-premise-set (cadr psi-premise-set)))
+	(psi-premise-set (cadr psi-and-premises)))
   (if (not (equal? derived psi))
       #f
       (let ((subs (which (map (lambda (x) (is-substitution-instance?
