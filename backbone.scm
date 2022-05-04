@@ -234,6 +234,21 @@
 		(first (cdr deduction)))
 	  #f))))
 
+(define (autoderive-argument rules
+			     ;target
+			     premises)
+  (let lp ((derivations (map (lambda (premise)
+			       (list premise
+				     (list premise)
+				     'premise-induction
+				     (list (cons premise
+						 (list premise)))))
+			     premises)))
+    (let ((step (autoderive-rules rules derivations)))
+      (if step
+	  (lp (append derivations (list step)))
+	  derivations))))
+
 (define (derive-modus-ponens phi-and-premise-set
 			     psi-and-premise-set)
   (define phi (get-sentence phi-and-premise-set))
@@ -263,3 +278,20 @@
 	       premise-induction
 	       (phi))))))
   (describe-step step))
+
+(autoderive-argument (list modus-ponens-rule)
+	    '(((implies phi psi)
+	       ((implies phi psi))
+	       premise-induction
+	       ((implies phi psi)))
+	      (phi
+	       (phi)
+	       premise-induction
+	       (phi))))
+
+(let ((arg (autoderive-argument (list modus-ponens-rule)
+				(list '(implies phi psi)
+				      '(implies psi phi)
+				      'phi))))
+  
+  (describe-argument arg))
