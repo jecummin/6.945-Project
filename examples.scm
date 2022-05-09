@@ -56,5 +56,5 @@
 	'(Water is good for you)))
 
 
-(define result (analyze-argument water-is-good-for-you))
+(define result (analyze-argument-with water-is-good-for-you 'theology))
 (describe-argument result)

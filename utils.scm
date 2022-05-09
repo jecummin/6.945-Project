@@ -7,20 +7,25 @@
 	 (if res
 	     (cons (car lis) res)
 	     (find-first pred (cdr lis))))))
-
+	    
+(define (display-line . items)
+  (for-each display items) (newline))
+  
 (define true? (lambda (x) #t))
 
 (define (get-sentence sentence) (first sentence))
 (define (get-premise-set sentence) (second sentence))
 
-(define (rule-name rule) (first rule))
-(define (rule-procedure rule) (second rule))
-(define (rule-applicability rule) (third rule))
+(define (rule-name rule) (second rule))
+(define (rule-procedure rule) (third rule))
+(define (rule-applicability rule) (fourth rule))
+(define (rule-id rule) (fifth rule))
+(define (rule-group rule) (sixth rule))
 
-(define derivation-sentence first)
-(define derivation-premise-set second)
-(define derivation-rule third)
-(define derivation-premise-sentences fourth)
+(define step-sentence second)
+(define step-premise-set third)
+(define step-rule fourth)
+(define step-premise-sentences fifth)
 			    
 (define (inference-premise-set inference) (cdr (cdr inference)))
 (define (inference-rule-name inference) (rule-name (car inference)))
@@ -28,6 +33,19 @@
 
 (define (tag x)
   (car x))
+
+;;; splits lst into two based on predicate
+;;; car of result is list of positives
+;;; cdr of result is list of negatives
+(define (split lst pred)
+  (let lp ((lst (reverse lst))
+  	    (pos (list))
+  	    (neg (list)))
+    (if (null? lst)
+        (cons pos neg)
+        (if (pred (car lst))
+            (lp (cdr lst) (cons (car lst) pos) neg)
+            (lp (cdr lst) pos (cons (car lst) neg))))))
 
 ;;; These aren't really utils
 ;;; But used for testing backbone.scm

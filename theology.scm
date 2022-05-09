@@ -84,7 +84,8 @@
 (define-rule!
   'the-word-is-true
   the-word-is-true-rule-1
-  (list the-word?))
+  (list the-word?)
+  'theology)
 
 (define (the-word-contents x)
   (cddr x))
@@ -100,7 +101,8 @@
 (define-rule!
   'the-word-is-true
   the-word-is-true-rule-2
-  (list sentence? the-word?))
+  (list sentence? the-word?)
+  'theology)
 
 ;; theologian-and-applicability target conj
 ;; (sentence? target)
@@ -116,7 +118,8 @@
 (define-rule!
   'theologian-and
   theologian-and-rule
-  (list sentence? and?))
+  (list sentence? and?)
+  'theology)
 
   
 ;; theologian-or-applicability target disj sent
@@ -140,7 +143,8 @@
 (define-rule!
   'theologian-or
   theologian-or-rule
-  (list sentence? or? sentence?))
+  (list sentence? or? sentence?)
+  'theology)
 
 
 
@@ -161,4 +165,5 @@
 (define-rule!
   'theologian-therefore
   theologian-therefore-rule
-  (list therefore? sentence? sentence?))
+  (list therefore? sentence? sentence?)
+  'theology)

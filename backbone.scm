@@ -1,23 +1,60 @@
 (load "utils.scm")
 
-#| INTERFACE |#
+#| USER INTERFACE |#
 
 ;;; Resets the list of rules
 (define (reset-rules!)
   (set! rules (list)))
 
-;;; Adds a rule
-(define (define-rule!
-	  name
-	  procedure
-	  applicability)
-  (set! rules (cons (list name
-			  procedure
-			  applicability)
-		    rules)))
+;;; Adds a rule into the specified rule group
+;;; Default is the "core" rule group
+(define (define-rule! name procedure applicability #!optional group)
+  (let ((group (if (equal? #!default group)
+		   'core
+		   group)))
+    (let ((rule (make-rule name procedure applicability group)))
+      (set! rules (cons rule rules)))))
 
-;;; Analyzes an argument (list of sentences) using defined rules
-(define (analyze-argument argument)
+
+;;; Get the list of rules
+(define (get-rules) rules)
+
+;;; List each rule's group, id, name
+(define (describe-rules)
+  (for-each describe-rule rules))
+
+(define (describe-rule rule)
+  (display-line (rule-group rule)
+                " (ID " (rule-id rule) ") "
+		(rule-name rule)))
+
+(define (get-by-group . groups)
+  (let ((s (split rules (lambda (rule)
+			  (member (rule-group rule) groups)))))
+    (car s)))
+
+;;; Removes all rules from the ruleset with a given name
+;;; If multiple names given, remove each name
+;;; If name does not exist, no change occurs
+;;; Returns list of removed rules
+(define (delete-rule-by-name . names)
+  (let ((s (split rules (lambda (rule)
+			  (member (rule-name rule) names)))))
+    (set! rules (cdr s))
+    (car s)))
+			  
+;;; Removes a rule from the ruleset given its id
+;;; If multiple ids given, deletes each id
+;;; If id does not exist, no change occurs
+;;; Returns list of removed rules
+(define (delete-rule-by-id . ids)
+  (let ((s (split rules (lambda (rule)
+			  (member (rule-id rule) id)))))
+    (set! rules (cdr s))
+    (car s)))
+	
+;;; Analyzes an argument (list of sentences) using all defined rules
+(define (analyze-argument argument . groups)		   
   (let lp ((argument argument)
 	   (premises (list)))
     (if (null? argument)
@@ -28,11 +65,39 @@
 	  (lp (cdr argument)
 	      (cons step premises))))))
 
+;;; Analyzes an argument (list of sentences) using specific rule sets
+;;; Note: "core" must be specified if desired (not automatically included)
+(define (analyze-argument-with argument . groups)
+  (let ((rules (apply get-by-group groups)))
+    (let lp ((argument argument)
+	     (premises (list)))  
+      (if (null? argument)	  
+	  (reverse premises)
+	  (let ((step (try-apply-rules rules
+				       (car argument)
+				       premises)))
+	    (lp (cdr argument)
+		(cons step premises)))))))
+  
 ;;; Prints the argument analysis in a more user-friendly format
 ;;; (The result of analyze-argument)
 (define (describe-argument argument)
   (display "\nArgument:\n")
   (for-each describe-step argument))
+
+;;; Prints single step of an argument
+(define (describe-step step)
+  (display-line "Statement: " (step-sentence step))
+  (display-line "Premise Set: ")
+  (for-each (lambda (premise)
+	      (display-line " - " premise))  
+	    (step-premise-set step))
+  (display-line "Rule: " (step-rule step))
+  (display-line "Premise Sentences: ")
+  (for-each (lambda (premise-sentence)
+	      (display-line " - " premise-sentence))
+	    (map car (reverse (step-premise-sentences step))))
+  (newline))
 
 ;; Prints each step as it is generated
 ;; (Useful for debugging in case of an error)
@@ -48,30 +113,19 @@
 	  (lp (cdr argument)
 	      (cons step premises))))))
 
-;;; Prints single step of an argument
-(define (describe-step step)
-  (display "Statement: ") (display (first step)) (newline)
-	      (display "Premise Set: ") (newline)
-	      (for-each (lambda (premise)
-			  (display " - ")
-			  (display premise)
-			  (newline))
-			(second step))
-	      (display "Rule: ") (display (third step)) (newline)
-	      (display "Premise Sentences: ") (newline)
-	      (for-each (lambda (premise-sentence)
-			  (display " - ")
-			  (display premise-sentence)
-			  (newline))
-			(map car (reverse (fourth step))))
-	      (newline))
     
-    
-  
-
-#| BACKEND |#
+#| CORE (BACKEND) |#
 
 (define rules (list))
+
+(define rule-id-counter 0)
+(define (new-id) (set! rule-id-counter (+ rule-id-counter 1)))
+
+(define (make-rule name procedure applicability group)
+  (list 'rule name procedure applicability (new-id) group))
+
+(define (make-step sentence premise-set rule premise-sentences)
+  (list 'step sentence premise-set rule premise-sentences))
 
 ;;; Returns false if rule is not applicable
 ;;; Otherwise returns pair
@@ -135,8 +189,8 @@
 			 derivations)
   (let ((sentences-and-premises
 	 (map (lambda (derivation)
-		(list (derivation-sentence derivation)
-		      (derivation-premise-set derivation)))
+		(list (step-sentence derivation)
+		      (step-premise-set derivation)))
 	      derivations)))
     (let ((inference
 	   (find-first (lambda (rule)
@@ -146,11 +200,13 @@
 				    sentences-and-premises))
 		       rules)))
       (if inference
-	  (list target
+	  (make-step
+	        target
 		(inference-premise-set inference)
 		(inference-rule-name inference)
 		(inference-premise-sentences inference))
-	  (list target
+	  (make-step
+	        target
 		(list target)
 		'premise-induction
 		(list (cons target
@@ -270,6 +326,7 @@
 			        derive-modus-ponens
 				(list implies? true?)))
 
+#|
 (let ((step (autoderive-rules (list modus-ponens-rule)
 	    '(((implies phi psi)
 	       ((implies phi psi))
@@ -297,3 +354,4 @@
 				      'phi))))
   
   (describe-argument arg))
+|#
